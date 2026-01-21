@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="login.css" />
+    <!-- Supabase Client Kütüphanesi -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+</head>
+<body>
+    <div class="center">
+      <h1>Giriş Yap</h1>
+      <form id="login-form">
+        <div class="txt_field">
+          <input type="email" id="email" required />
+          <span></span>
+          <label>Email</label>
+        </div>
+        <div class="txt_field">
+          <input type="password" id="password" required />
+          <span></span>
+          <label>Password</label>
+        </div>
+
+        <input type="submit" value="Login" />
+
+      </form>
+    </div>
+
+    <!-- Kendi JavaScript dosyamız -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>

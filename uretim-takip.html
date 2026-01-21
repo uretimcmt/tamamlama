@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Üretim Takip Paneli</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase Client Kütüphanesi -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- YENİ: Excel'e aktarma kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- YENİ: İkonlar için Font Awesome kütüphanesi -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo">
+            <a href="index.html">ÇUKUROVA</a>
+        </div>
+        <div class="nav-container">
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="index.html">Ana Sayfa</a></li>
+                    <li><a href="uretim-takip.html">Üretim Takip Paneli</a></li>
+                    <li><a href="sevk-edilenler.html">Sevk Edilen Makinalar</a></li>
+                    <li class="admin-only"><a href="kullanici-yonetimi.html">Kullanıcı Yönetimi</a></li>
+                </ul>
+            </nav>
+            <div class="user-actions">
+                <span id="user-email" class="user-email"></span>
+                <button id="logout-btn" class="logout-btn">Çıkış Yap</button>
+            </div>
+        </div>
+        <div class="hamburger">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </div>
+    </header>
+
+    <main class="content">
+        <h1>Üretim Takip Paneli</h1>
+
+        <!-- Yeni Makina Ekle Butonu -->
+        <div class="action-bar">
+            <button id="show-add-machine-modal" class="button-primary">Yeni Makina Ekle</button>
+            <!-- YENİ: Arama ve Filtreleme Kontrolleri -->
+            <div class="filter-controls">
+                <input type="search" id="search-input" placeholder="Model, Seri No, Şase No ara...">
+                <select id="machine-type-filter">
+                    <option value="">Tüm Tipler</option>
+                    <option value="BL">BL</option>
+                    <option value="WL">WL</option>
+                    <option value="YŞ">YŞ</option>
+                    <option value="ZBL">ZBL</option>
+                    <option value="ZWL">ZWL</option>
+                </select>
+                <button id="export-production-btn" class="button-icon" title="Excel'e Aktar"><i class="fas fa-file-excel"></i></button>
+            </div>
+        </div>
+
+        <!-- Verilerin gösterileceği alan -->
+        <div id="production-data-container">
+            <p>Veriler yükleniyor...</p>
+        </div>
+
+        <!-- YENİ: Sayfalama Kontrolleri -->
+        <div id="pagination-controls" class="pagination-container">
+            <button id="prev-page-btn" class="button-secondary">Önceki</button>
+            <span id="page-info"></span>
+            <button id="next-page-btn" class="button-secondary">Sonraki</button>
+        </div>
+    </main>
+
+    <!-- Makina Detay Görünümü (Başlangıçta Gizli) -->
+    <div id="machine-detail-view" style="display: none;">
+        <!-- İçerik JavaScript ile dinamik olarak oluşturulacak -->
+    </div>
+
+    <!-- Yeni Makina Ekleme Modalı -->
+    <div id="add-machine-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Yeni Makina Ekle</h2>
+            <form id="add-machine-form">
+                <div class="form-group">
+                    <label for="machine_type">Makina Tipi</label>
+                    <select id="machine_type" name="machine_type" required>
+                        <option value="">Seçiniz...</option>
+                        <option value="BL">BL</option>
+                        <option value="WL">WL</option>
+                        <option value="YŞ">YŞ</option>
+                        <option value="ZBL">ZBL</option>
+                        <option value="ZWL">ZWL</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="model">Makina Modeli</label>
+                    <input type="text" id="model" name="model" required>
+                </div>
+                <div class="form-group"><label for="serial_number">Seri No</label><input type="text" id="serial_number" name="serial_number"></div>
+                <div class="form-group"><label for="chassis_number">Şase No</label><input type="text" id="chassis_number" name="chassis_number"></div>
+                <div class="form-group"><label for="production_date">Bant Çıkış Tarihi</label><input type="date" id="production_date" name="production_date" required></div>
+                <div class="form-group">
+                    <label for="initial-defects-textarea">Başlangıç Eksikleri (Her satıra bir tane)</label>
+                    <textarea id="initial-defects-textarea" name="initial_defects" rows="4"></textarea>
+                </div>
+                <button type="submit" id="add-machine-button" class="button-primary">Makina Ekle</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sevkiyat Onay Modalı -->
+    <div id="shipment-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="close-button">&times;</span>
+            <h2>Sevkiyat Onayı</h2>
+            <p>Lütfen makinanın sevk edileceği tarihi seçin.</p>
+            <div class="form-group">
+                <label for="shipment-date-picker">Sevk Tarihi</label>
+                <input type="date" id="shipment-date-picker" required>
+            </div>
+            <button id="confirm-shipment-button" class="button-primary">Onayla ve Sevk Et</button>
+        </div>
+    </div>
+
+    <!-- Bu sayfaya özel JavaScript dosyası -->
+    <script type="module" src="uretim-takip.js"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ana Sayfa</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase Client Kütüphanesi -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- YENİ: Excel'e aktarma kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- YENİ: İkonlar için Font Awesome kütüphanesi -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo">
+            <a href="#">ÇUKUROVA</a>
+        </div>
+        <div class="nav-container">
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="index.html">Ana Sayfa</a></li>
+                    <li><a href="uretim-takip.html">Üretim Takip Paneli</a></li>
+                    <li><a href="sevk-edilenler.html">Sevk Edilen Makinalar</a></li>
+                    <li class="admin-only"><a href="kullanici-yonetimi.html">Kullanıcı Yönetimi</a></li>
+                </ul>
+            </nav>
+            <div class="user-actions">
+                <span id="user-email" class="user-email"></span>
+                <button id="logout-btn" class="logout-btn">Çıkış Yap</button>
+            </div>
+        </div>
+        <div class="hamburger">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </div>
+    </header>
+
+    <main class="content">
+        <h1>Ana Sayfa</h1>
+    
+        <!-- İstatistik Kartları -->
+        <div id="stats-container" class="stats-grid">
+            <!-- İstatistikler JS ile yüklenecek -->
+        </div>
+    
+        <!-- Süreçlere Göre Makina Listesi -->
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>Süreçlerde Bekleyen Makinalar</h2>
+                <button id="export-dashboard-btn" class="button-icon" title="Excel'e Aktar"><i class="fas fa-file-excel"></i></button>
+            </div>
+            <div id="step-summary-container">
+                <!-- Liste JS ile yüklenecek -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Makina Detay Görünümü (Başlangıçta Gizli) -->
+    <div id="machine-detail-view" style="display: none;">
+        <!-- İçerik JavaScript ile dinamik olarak oluşturulacak -->
+    </div>
+
+    <!-- Kendi JavaScript dosyamız -->
+    <script type="module" src="index.js"></script>
+</body>
+</html>
