@@ -56,7 +56,7 @@ let onBackCallback;
 export const calculateReadyDuration = (machine) => {
     // YENİ: 1 Ocak 2026 tarihinden önceki makinaları hesaplamaya dahil etme
     const productionDate = new Date(machine.production_date);
-    const cutoffDate = new Date('2026-01-01');
+    const cutoffDate = new Date('2026-06-17');
 
     if (productionDate < cutoffDate) {
         return null;
@@ -349,6 +349,22 @@ const renderContentForStep = async (stepName, machine) => {
             shipmentDateHtml = `<div><strong>Sevk Tarihi:</strong> ${displayDate}</div>`;
         }
 
+        // Müşteri İsmi Alanı (Düzenlenebilir)
+        let customerNameHtml = '';
+        if (['admin', 'montaj'].includes(currentUserRole) && !isReadOnly) {
+            customerNameHtml = `
+                <div class="form-group" style="grid-column: 1 / -1; margin-top: 10px;">
+                    <label for="customer-name-input"><strong>Müşteri İsmi:</strong></label>
+                    <textarea id="customer-name-input" class="form-control" rows="2" placeholder="Müşteri ismini girin..." style="font-weight: bold;">${escapeHtml(machine.customer_name || '')}</textarea>
+                </div>`;
+        } else {
+            customerNameHtml = `
+                <div style="grid-column: 1 / -1; margin-top: 10px;">
+                    <strong>Müşteri İsmi:</strong> 
+                    <div class="note-display" style="background: #f8f9fa; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px; margin-top: 5px;">${escapeHtml(machine.customer_name || '-')}</div>
+                </div>`;
+        }
+
         // YENİ: Son Durum Notu alanı sadece admin ve montaj yetkisi olanlar için düzenlenebilir.
         const canEditFinalStatus = ['admin', 'montaj'].includes(currentUserRole) && !isReadOnly;
         let finalStatusHtml = '';
@@ -363,6 +379,7 @@ const renderContentForStep = async (stepName, machine) => {
             <div class="info-grid">
                 <div><strong>Tip:</strong> ${escapeHtml(machine.machine_type) || '-'}</div>
                 <div><strong>Model:</strong> ${escapeHtml(machine.model) || '-'}</div>
+                ${customerNameHtml}
                 <div><strong>Seri No:</strong> ${escapeHtml(machine.serial_number) || '-'}</div>
                 <div><strong>Şase No:</strong> ${escapeHtml(machine.chassis_number) || '-'}</div>
                 <div><strong>Bant Çıkış:</strong> ${new Date(machine.production_date).toLocaleDateString('tr-TR')}</div>
@@ -949,6 +966,17 @@ const addDetailViewEventListeners = (machineId) => {
             const { error } = await _supabase.from('machines').update({ shipment_date: newDate }).eq('id', machineId);
             if (error) {
                 alert('Sevk tarihi güncellenirken hata oluştu: ' + error.message);
+            }
+        });
+    }
+
+    const customerNameInput = document.getElementById('customer-name-input');
+    if (customerNameInput) {
+        customerNameInput.addEventListener('blur', async (event) => {
+            const newName = event.target.value;
+            const { error } = await _supabase.from('machines').update({ customer_name: newName }).eq('id', machineId);
+            if (error) {
+                alert('Müşteri ismi güncellenirken hata oluştu: ' + error.message);
             }
         });
     }

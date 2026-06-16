@@ -193,7 +193,6 @@ const loadDashboardStats = async () => {
                         <span>Model</span>
                         <span>Seri No</span>
                         <span>Şase No</span>
-                        <span>Bant Çıkış</span>
                         <span>Adıma Giriş Tarihi</span>
                     </div>
                     ${machinesInStep.map(machine => {
@@ -235,7 +234,6 @@ const loadDashboardStats = async () => {
                             <span>${machine.model || '-'}</span>
                             <span>${machine.serial_number || '-'}</span>
                             <span>${machine.chassis_number || '-'}</span>
-                            <span>${new Date(machine.production_date).toLocaleDateString('tr-TR')}</span>
                             <span>${entryDate.toLocaleDateString('tr-TR')}</span>
                         </div>
                     `}).join('')}
@@ -287,7 +285,7 @@ const exportDashboardToExcel = () => {
     data.push([]); // Boş satır
 
     // Detaylı Liste
-    const detailHeaders = ["Adım", "Model", "Seri No", "Şase No", "Bant Çıkış Tarihi", "Adıma Giriş Tarihi"];
+    const detailHeaders = ["Adım", "Model", "Seri No", "Şase No", "Adıma Giriş Tarihi"];
     data.push(detailHeaders);
 
     for (const step in dashboardData.waitingMachinesByStep) {
@@ -317,7 +315,6 @@ const exportDashboardToExcel = () => {
                     machine.model || '-',
                     machine.serial_number || '-',
                     machine.chassis_number || '-',
-                    new Date(machine.production_date).toLocaleDateString('tr-TR'),
                     entryDate.toLocaleDateString('tr-TR')
                 ];
                 data.push(row);

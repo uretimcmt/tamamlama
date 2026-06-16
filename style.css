@@ -399,8 +399,8 @@ th.sortable.sorted-desc::after {
 }
 
 /* Süreç adımı sütunları için metin kaydırma ve hizalama ("Tamamlama 1" ve sonrası) */
-th:nth-child(n+9),
-td:nth-child(n+9) {
+th:nth-child(n+10),
+td:nth-child(n+10) {
     white-space: normal;    /* Metnin alt satıra kaymasına izin ver (wrap text) */
     text-align: center;     /* İçeriği yatayda ortala */
     vertical-align: middle; /* İçeriği dikeyde ortala */
@@ -1068,10 +1068,24 @@ tbody tr:hover {
 
 .step-detail-header, .step-detail-item {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-    gap: 15px;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 10px;
     padding: 10px 0;
     align-items: center;
+}
+
+@media (max-width: 600px) {
+    .step-detail-header, .step-detail-item {
+        gap: 5px; /* Sütunlar arası boşluğu daralt */
+        font-size: 0.75rem; /* Genel yazı boyutunu küçült */
+        /* Model ve Şase'ye biraz daha fazla, Seri ve Tarih'e daha az yer ver */
+        grid-template-columns: 1.1fr 0.9fr 1.2fr 0.8fr; 
+    }
+    
+    .step-detail-item span:nth-child(3) {
+        font-size: 0.7rem; /* Şase no'yu daha da küçült */
+        word-break: break-all; /* Sığmazsa kelimeyi bölerek alt satıra geç */
+    }
 }
 
 .step-detail-header {
@@ -1088,6 +1102,17 @@ tbody tr:hover {
 
 .step-detail-item:hover {
     background-color: #f9f9f9;
+}
+
+/* Müşteri İsmi sütunu (4. sütun) için metin kaydırma ve yazı boyutu küçültme */
+th:nth-child(4),
+td:nth-child(4) {
+    white-space: normal;
+    font-size: 0.8125rem; /* 13px */
+    max-width: 200px;
+    min-width: 200px;
+    vertical-align: middle;
+    word-break: break-word;
 }
 
 .step-detail-item:last-child {

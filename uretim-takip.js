@@ -124,6 +124,7 @@ const renderMachineTable = (machines, from) => {
         { title: "SN", sortable: false },
         { title: "Makina Tipi", sortable: true, field: 'machine_type' },
         { title: "Model", sortable: true, field: 'model' },
+        { title: "Müşteri İsmi", sortable: true, field: 'customer_name' },
         { title: "Seri No", sortable: true, field: 'serial_number' },
         { title: "Şase No", sortable: true, field: 'chassis_number' },
         { title: "Bant Çıkış", sortable: true, field: 'production_date' },
@@ -183,6 +184,7 @@ const renderMachineTable = (machines, from) => {
                 <td>${from + index + 1}</td>
                 <td>${machine.machine_type || '-'}</td>
                 <td>${machine.model || '-'}</td>
+                <td>${machine.customer_name || '-'}</td>
                 <td>${machine.serial_number || '-'}</td>
                 <td>${machine.chassis_number || '-'}</td>
                 <td>${productionDate}</td>
@@ -982,6 +984,7 @@ const exportProductionToExcel = async () => {
                 'SN': index + 1,
                 'Tip': machine.machine_type,
                 'Model': machine.model,
+                'Müşteri İsmi': machine.customer_name || '-',
                 'Seri No': machine.serial_number,
                 'Şase No': machine.chassis_number,
                 'Bant Çıkış': new Date(machine.production_date).toLocaleDateString('tr-TR'),
@@ -1034,7 +1037,7 @@ const exportProductionToExcel = async () => {
  * YENİ: Makina yükleme için örnek Excel şablonunu indirir.
  */
 const downloadExampleExcel = () => {
-    const headers = ['Makina Tipi', 'Makina Modeli', 'Seri No', 'Şase No', 'Bant Çıkış Tarihi'];
+    const headers = ['Makina Tipi', 'Makina Modeli', 'Müşteri İsmi', 'Seri No', 'Şase No', 'Bant Çıkış Tarihi'];
     // Süreç adımlarını başlık olarak ekle (Durum hariç)
     PROCESS_STEPS.forEach(step => {
         if (step !== 'Durum') headers.push(step);
@@ -1043,7 +1046,7 @@ const downloadExampleExcel = () => {
     const data = [headers];
     
     // Örnek veri satırı
-    const exampleRow = ['Kazıcı Yükleyici', '102S', 'S12345', 'N098765', '25.10.2023'];
+    const exampleRow = ['Kazıcı Yükleyici', '102S', 'Örnek Müşteri Ltd.', 'S12345', 'N098765', '25.10.2023'];
     // Süreç sütunları için boşluk veya örnek değer
     PROCESS_STEPS.forEach(step => {
         if (step !== 'Durum') {
@@ -1078,6 +1081,7 @@ const handleAddMachineFormSubmit = async (event) => {
     const machineData = {
         machine_type: formData.get('machine_type'),
         model: formData.get('model'),
+        customer_name: formData.get('customer_name'),
         serial_number: formData.get('serial_number'),
         chassis_number: formData.get('chassis_number'),
         production_date: formData.get('production_date'),
@@ -1219,6 +1223,7 @@ const handleExcelImport = async (event) => {
                 const machine = {
                     machine_type: row['Makina Tipi'] || row['Tip'] || '',
                     model: row['Makina Modeli'] || row['Model'] || '',
+                    customer_name: row['Müşteri İsmi'] || '',
                     serial_number: row['Seri No'] || '',
                     chassis_number: row['Şase No'],
                     production_date: productionDate,
