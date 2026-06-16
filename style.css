@@ -239,6 +239,14 @@ body {
     font-size: 0.9375rem;
     font-family: "Poppins", sans-serif;
 }
+#search-input, #category-filter {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 0.9375rem;
+    font-family: "Poppins", sans-serif;
+}
+
 
 #search-input {
     width: 250px;

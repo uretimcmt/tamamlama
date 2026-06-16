@@ -31,6 +31,24 @@ const loadDashboardStats = async () => {
     statsContainer.innerHTML = 'Yükleniyor...';
     stepSummaryContainer.innerHTML = 'Yükleniyor...';
 
+    // YENİ: Kategori Filtresi Ekle (Eğer yoksa)
+    if (!document.getElementById('category-filter-container')) {
+        const filterHtml = `
+            <div id="category-filter-container" style="margin-bottom: 20px; text-align: left; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08);">
+                <label for="category-filter" style="font-weight: 600; margin-right: 10px;">Kategori Seçin:</label>
+                <select id="category-filter" class="form-control" style="width: 250px; padding: 8px; border-radius: 5px; border: 1px solid #ccc; font-family: 'Poppins', sans-serif;">
+                    <option value="bekolar">Bekolar (BL)</option>
+                    <option value="diger">Diğer Makinalar</option>
+                    <option value="all">Tüm Makinalar</option>
+                </select>
+            </div>
+        `;
+        stepSummaryContainer.insertAdjacentHTML('beforebegin', filterHtml);
+        document.getElementById('category-filter').addEventListener('change', loadDashboardStats);
+    }
+
+    const currentCategory = document.getElementById('category-filter')?.value || 'all';
+
     try {
         // 1. Stoktaki (Sevk edilmemiş) makinaları çek (Listeler ve Stok Sayısı için)
         const { data: inProductionMachines, error } = await _supabase
@@ -47,7 +65,16 @@ const loadDashboardStats = async () => {
 
         if (statsError) throw statsError;
 
-        dashboardData.inProductionMachines = inProductionMachines; // Veriyi global değişkene ata
+        // YENİ: Kategoriye göre filtreleme
+        let filteredInProduction = inProductionMachines;
+        if (currentCategory === 'bekolar') {
+            filteredInProduction = inProductionMachines.filter(m => m.machine_type === 'BL');
+        } else if (currentCategory === 'diger') {
+            filteredInProduction = inProductionMachines.filter(m => m.machine_type !== 'BL');
+        }
+
+        dashboardData.inProductionMachines = inProductionMachines; // Ham veriyi Excel için sakla
+        dashboardData.filteredInProduction = filteredInProduction; // Dashboard görünümü için
 
         // YENİ: Sevkiyata hazır olma süresi hesaplama (Ortalama)
         let totalReadyDays = 0;
@@ -76,7 +103,7 @@ const loadDashboardStats = async () => {
         // 1. Toplam makina sayısını göster
         statsContainer.innerHTML = `
             <div class="stat-card">
-                <div class="value">${inProductionMachines.length}</div>
+                <div class="value">${filteredInProduction.length}</div>
                 <div class="label">Stoktaki Makina Sayısı</div>
             </div>
             <div class="stat-card clickable" id="ready-duration-card" title="Detaylar için tıklayın">
@@ -96,7 +123,7 @@ const loadDashboardStats = async () => {
         // YENİ: Sevkiyata Hazır kategorisi ekle (En altta görünmesi için sona ekliyoruz)
         waitingMachinesByStep["Sevkiyata Hazır"] = [];
 
-        inProductionMachines.forEach(machine => {
+        filteredInProduction.forEach(machine => {
             let isWaiting = false;
             for (const step of PROCESS_STEPS) {
                 const stepKey = getStatusKey(step);
@@ -267,83 +294,74 @@ const loadDashboardStats = async () => {
  * Dashboard verilerini Excel'e aktarır.
  */
 const exportDashboardToExcel = () => {
-    if (!dashboardData.waitingMachinesByStep) {
+    if (!dashboardData.inProductionMachines) {
         alert("Dışa aktarılacak veri bulunamadı.");
         return;
     }
 
-    const data = [];
-    data.push(["MAKİNA DURUM ÖZET RAPORU"]);
-    data.push([`Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR')}`]);
-    data.push([]); // Boş satır
+    const wb = XLSX.utils.book_new();
 
-    // Özet Tablosu
-    data.push(["ADIM", "BEKLEYEN MAKİNA ADEDİ"]);
-    for (const step in dashboardData.waitingMachinesByStep) {
-        data.push([step, dashboardData.waitingMachinesByStep[step].length]);
-    }
-    data.push([]); // Boş satır
+    const createSheetData = (machines) => {
+        const data = [];
+        data.push(["MAKİNA DURUM ÖZET RAPORU"]);
+        data.push([`Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR')}`]);
+        data.push([]);
 
-    // Detaylı Liste
-    const detailHeaders = ["Adım", "Model", "Seri No", "Şase No", "Adıma Giriş Tarihi"];
-    data.push(detailHeaders);
+        const steps = {};
+        PROCESS_STEPS.forEach(s => steps[s] = []);
+        steps["Sevkiyata Hazır"] = [];
 
-    for (const step in dashboardData.waitingMachinesByStep) {
-        const machinesInStep = dashboardData.waitingMachinesByStep[step];
-        if (machinesInStep.length > 0) {
-            machinesInStep.forEach(machine => {
-                // Adıma giriş tarihini Excel için tekrar hesapla
-                let entryDate = new Date(machine.production_date);
-                if (step === "Sevkiyata Hazır") {
-                    const lastStepKey = getStatusKey("PDI-2 Tmmlm");
-                    if (machine.status && machine.status[lastStepKey]?.completedAt) {
-                        entryDate = new Date(machine.status[lastStepKey].completedAt);
-                    }
-                } else {
-                    const currentStepIndex = PROCESS_STEPS.indexOf(step);
-                    if (currentStepIndex > 0) {
-                        const prevStepName = PROCESS_STEPS[currentStepIndex - 1];
-                        const prevStepKey = getStatusKey(prevStepName);
-                        const prevStepData = machine.status ? machine.status[prevStepKey] : null;
-                        if (prevStepData && prevStepData.completedAt) {
-                            entryDate = new Date(prevStepData.completedAt);
+        machines.forEach(m => {
+            let isWaiting = false;
+            for (const step of PROCESS_STEPS) {
+                const key = getStatusKey(step);
+                if (!m.status || !m.status[key]?.completed) {
+                    steps[step].push(m);
+                    isWaiting = true;
+                    break;
+                }
+            }
+            if (!isWaiting) steps["Sevkiyata Hazır"].push(m);
+        });
+
+        data.push(["ADIM", "BEKLEYEN MAKİNA ADEDİ"]);
+        for (const step in steps) {
+            data.push([step, steps[step].length]);
+        }
+        data.push([]);
+
+        data.push(["Adım", "Model", "Seri No", "Şase No", "Adıma Giriş Tarihi"]);
+        for (const step in steps) {
+            if (steps[step].length > 0) {
+                steps[step].forEach(m => {
+                    let entryDate = new Date(m.production_date);
+                    if (step === "Sevkiyata Hazır") {
+                        const lastKey = getStatusKey("PDI-2 Tmmlm");
+                        if (m.status?.[lastKey]?.completedAt) entryDate = new Date(m.status[lastKey].completedAt);
+                    } else {
+                        const idx = PROCESS_STEPS.indexOf(step);
+                        if (idx > 0) {
+                            const prevKey = getStatusKey(PROCESS_STEPS[idx - 1]);
+                            if (m.status?.[prevKey]?.completedAt) entryDate = new Date(m.status[prevKey].completedAt);
                         }
                     }
-                }
-                const row = [
-                    step,
-                    machine.model || '-',
-                    machine.serial_number || '-',
-                    machine.chassis_number || '-',
-                    entryDate.toLocaleDateString('tr-TR')
-                ];
-                data.push(row);
-            });
-            // YENİ: Her adım grubundan sonra boş bir satır ekle
-            data.push([]);
-        }
-    }
-
-    const ws = XLSX.utils.aoa_to_sheet(data);
-
-    // --- YENİ: Sütun genişliklerini otomatik ayarla ---
-    const colWidths = [];
-    data.forEach(row => {
-        row.forEach((cell, i) => {
-            const cellLen = cell ? String(cell).length : 0;
-            if (!colWidths[i] || cellLen > colWidths[i]) {
-                colWidths[i] = cellLen;
+                    data.push([step, m.model || '-', m.serial_number || '-', m.chassis_number || '-', entryDate.toLocaleDateString('tr-TR')]);
+                });
+                data.push([]);
             }
-        });
-    });
-    ws['!cols'] = colWidths.map(w => ({ wch: w + 2 })); // +2 for padding
-    // --- BİTTİ: Sütun genişliklerini otomatik ayarla ---
+        }
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = [{wch: 25}, {wch: 15}, {wch: 15}, {wch: 20}, {wch: 20}];
+        return ws;
+    };
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Dashboard Raporu");
+    const bekolar = dashboardData.inProductionMachines.filter(m => m.machine_type === 'BL');
+    const diger = dashboardData.inProductionMachines.filter(m => m.machine_type !== 'BL');
 
-    const today = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `Dashboard_Raporu_${today}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, createSheetData(bekolar), "Bekolar");
+    XLSX.utils.book_append_sheet(wb, createSheetData(diger), "Diğer Makinalar");
+
+    XLSX.writeFile(wb, `Dashboard_Raporu_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
 /**

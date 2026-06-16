@@ -19,6 +19,7 @@ let currentUserRole = null; // YENİ: Kullanıcının rolünü modül içinde sa
 // YENİ: Arama ve Filtreleme durumu için global değişkenler
 let currentSearchTerm = '';
 let currentMachineTypeFilter = '';
+let currentCategoryFilter = 'all'; // YENİ: Kategori filtresi (Bekolar/Diğer)
 // YENİ: Sayfalama durumu için global değişkenler
 const PAGE_SIZE = 20; // Sayfa başına gösterilecek makina sayısı
 let currentPage = 1;
@@ -70,6 +71,12 @@ const fetchProductionData = async () => {
         .eq('is_shipped', false);
 
     // YENİ: Filtreleme
+    if (currentCategoryFilter === 'bekolar') {
+        query = query.eq('machine_type', 'BL');
+    } else if (currentCategoryFilter === 'diger') {
+        query = query.neq('machine_type', 'BL');
+    }
+
     if (currentMachineTypeFilter) {
         query = query.eq('machine_type', currentMachineTypeFilter);
     }
@@ -966,11 +973,6 @@ const exportProductionToExcel = async () => {
     try {
         // Filtrelenmiş verinin tamamını çekmek için yeni bir sorgu yapıyoruz.
         let query = _supabase.from('machines').select('*').eq('is_shipped', false);
-        if (currentMachineTypeFilter) query = query.eq('machine_type', currentMachineTypeFilter);
-        if (currentSearchTerm) {
-            const plainQuery = currentSearchTerm.trim().split(' ').filter(term => term).join(' & ');
-            query = query.textSearch('search_vector', plainQuery);
-        }
         const { data: machines, error } = await query.order(currentSortField, { ascending: currentSortDirection === 'asc' });
 
         if (error) throw error;
@@ -979,52 +981,33 @@ const exportProductionToExcel = async () => {
             return;
         }
 
-        const dataToExport = machines.map((machine, index) => {
-            const row = {
-                'SN': index + 1,
-                'Tip': machine.machine_type,
-                'Model': machine.model,
-                'Müşteri İsmi': machine.customer_name || '-',
-                'Seri No': machine.serial_number,
-                'Şase No': machine.chassis_number,
-                'Bant Çıkış': new Date(machine.production_date).toLocaleDateString('tr-TR'),
-                'Sevk Tarihi': machine.shipment_date ? new Date(machine.shipment_date).toLocaleDateString('tr-TR') : '-',
-                'Son Durum': machine.final_status || ''
-            };
-            PROCESS_STEPS.filter(s => s !== "Durum").forEach(step => {
-                const stepKey = getStatusKey(step);
-                row[step] = machine.status?.[stepKey]?.completed ? "OK" : "Bekliyor";
-            });
-            return row;
-        });
-
-        const ws = XLSX.utils.json_to_sheet(dataToExport);
-
-        // --- YENİ: Sütun genişliklerini ve stilleri ayarla ---
-        const colWidths = Object.keys(dataToExport[0]).map(key => {
-            const headerLength = key.length;
-            const maxLength = Math.max(headerLength, ...dataToExport.map(row => (row[key] ? String(row[key]).length : 0)));
-            if (key === 'Son Durum') {
-                return { wch: 40 }; // "Son Durum" için sabit genişlik
-            }
-            return { wch: maxLength + 2 }; // Diğerleri için otomatik genişlik + dolgu
-        });
-        ws['!cols'] = colWidths;
-
-        const sonDurumColIndex = Object.keys(dataToExport[0]).indexOf('Son Durum');
-        if (sonDurumColIndex > -1) {
-            dataToExport.forEach((row, rowIndex) => {
-                const cellAddress = XLSX.utils.encode_cell({ r: rowIndex + 1, c: sonDurumColIndex });
-                if (ws[cellAddress]) {
-                    ws[cellAddress].t = 's'; // Hücre tipini 'string' (metin) olarak zorla
-                    ws[cellAddress].s = { alignment: { wrapText: true, vertical: 'top' } }; // Metni kaydır
-                }
-            });
-        }
-        // --- BİTTİ: Sütun genişliklerini ve stilleri ayarla ---
+        const bekolar = machines.filter(m => m.machine_type === 'BL');
+        const diger = machines.filter(m => m.machine_type !== 'BL');
 
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Üretim Takip");
+
+        const prepareSheet = (list, sheetName) => {
+            const dataToExport = list.map((m, index) => {
+                const row = {
+                    'SN': index + 1, 'Tip': m.machine_type, 'Model': m.model, 'Müşteri': m.customer_name || '-',
+                    'Seri No': m.serial_number, 'Şase No': m.chassis_number,
+                    'Bant Çıkış': new Date(m.production_date).toLocaleDateString('tr-TR'),
+                    'Sevk Tarihi': m.shipment_date ? new Date(m.shipment_date).toLocaleDateString('tr-TR') : '-',
+                    'Son Durum': m.final_status || ''
+                };
+                PROCESS_STEPS.filter(s => s !== "Durum").forEach(step => {
+                    row[step] = m.status?.[getStatusKey(step)]?.completed ? "OK" : "Bekliyor";
+                });
+                return row;
+            });
+            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            ws['!cols'] = Object.keys(dataToExport[0] || {}).map(k => ({wch: k === 'Son Durum' ? 40 : 15}));
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        };
+
+        prepareSheet(bekolar, "Bekolar");
+        prepareSheet(diger, "Diğer Makinalar");
+
         XLSX.writeFile(wb, `Uretim_Takip_Listesi_${new Date().toISOString().slice(0, 10)}.xlsx`);
 
     } catch (error) {
@@ -1346,6 +1329,16 @@ const setupEventListeners = () => {
             currentSearchTerm = searchInput.value;
             fetchProductionData();
         }, 500)); // 500ms gecikme
+    }
+
+    // Kategori filtresi için
+    const categoryFilter = document.getElementById('category-filter');
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', () => {
+            currentCategoryFilter = categoryFilter.value;
+            currentPage = 1;
+            fetchProductionData();
+        });
     }
 
     // Tip filtresi için
