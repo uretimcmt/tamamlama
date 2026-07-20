@@ -56,7 +56,7 @@ let onBackCallback;
 export const calculateReadyDuration = (machine) => {
     // YENİ: 1 Ocak 2026 tarihinden önceki makinaları hesaplamaya dahil etme
     const productionDate = new Date(machine.production_date);
-    const cutoffDate = new Date('2026-06-17');
+    const cutoffDate = new Date('2026-01-01');
 
     if (productionDate < cutoffDate) {
         return null;
