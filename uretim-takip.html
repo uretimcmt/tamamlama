@@ -112,6 +112,25 @@
                 <div class="form-group"><label for="chassis_number">Şase No</label><input type="text" id="chassis_number" name="chassis_number"></div>
                 <div class="form-group"><label for="production_date">Bant Çıkış Tarihi</label><input type="date" id="production_date" name="production_date" required></div>
                 <div class="form-group">
+                    <label for="yukleme_tipi">Yükleme Tipi</label>
+                    <select id="yukleme_tipi" name="yukleme_tipi">
+                        <option value="">Seçiniz...</option>
+                        <option value="TIR">TIR</option>
+                        <option value="KONTEYNER">KONTEYNER</option>
+                        <option value="RO-RO">RO-RO</option>
+                        <option value="FLATRACK">FLATRACK</option>
+                        <option value="LOWBED">LOWBED</option>
+                        <option value="SKD">SKD</option>
+                        <option value="KONTEYNER">KONTEYNER</option>
+                        <option value="custom">Elle girin</option>
+                    </select>
+                    <input type="text" id="yukleme_tipi_custom" name="yukleme_tipi_custom" placeholder="Yükleme tipini yazın..." style="display: none; margin-top: 10px;">
+                </div>
+                <div class="form-group">
+                    <label for="kepce_sokme">Kepçe Sökme</label>
+                    <input type="text" id="kepce_sokme" name="kepce_sokme">
+                </div>
+                <div class="form-group">
                     <label for="initial-defects-textarea">Başlangıç Eksikleri (Her satıra bir tane)</label>
                     <textarea id="initial-defects-textarea" name="initial_defects" rows="4"></textarea>
                 </div>

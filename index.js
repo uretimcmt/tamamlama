@@ -61,7 +61,8 @@ const loadDashboardStats = async () => {
         // 2. İstatistik hesaplaması için TÜM makinaların durum verisini çek (Sevk edilenler dahil)
         const { data: allMachinesStatus, error: statsError } = await _supabase
             .from('machines')
-            .select('id, chassis_number, production_date, shipment_date, status');
+            .select('id, chassis_number, production_date, shipment_date, status')
+            .eq('machine_type', 'BL'); // SADECE BEKOLARI HESAPLAMAYA DAHİL ET
 
         if (statsError) throw statsError;
 

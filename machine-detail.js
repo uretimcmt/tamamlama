@@ -374,6 +374,13 @@ const renderContentForStep = async (stepName, machine) => {
             finalStatusHtml = `<div class="note-display" style="white-space: pre-wrap; background: #f8f9fa; padding: 10px; border: 1px solid #dee2e6; border-radius: 4px;">${escapeHtml(machine.final_status || 'Not girilmemiş.')}</div>`;
         }
 
+        // YENİ: Yükleme tipi için standart seçenekler ve özel giriş kontrolü
+        const YUKLEME_TIPI_OPTIONS = ["TIR", "KONTEYNER", "RO-RO", "FLATRACK", "LOWBED", "SKD"];
+        const isCustomYuklemeTipi = machine.yukleme_tipi && !YUKLEME_TIPI_OPTIONS.includes(machine.yukleme_tipi);
+        const customYuklemeTipiValue = isCustomYuklemeTipi ? machine.yukleme_tipi : '';
+        const yuklemeTipiSelectValue = isCustomYuklemeTipi ? 'Elle girin' : machine.yukleme_tipi;
+        const customInputDisplay = isCustomYuklemeTipi ? 'block' : 'none';
+
         contentArea.innerHTML = `
             <h2>Makina Künyesi ve Durum Özeti</h2>
             <div class="info-grid">
@@ -390,6 +397,30 @@ const renderContentForStep = async (stepName, machine) => {
             <h2>Başlangıç Eksikleri</h2>
             <ul id="initial-defects-list" class="defect-checklist">${initialDefectsHtml}</ul>
             
+            <br>
+            <div class="info-grid">
+                <div class="form-group">
+                    <label for="yukleme_tipi_detail"><strong>Yükleme Tipi:</strong></label>
+                    <select id="yukleme_tipi_detail" name="yukleme_tipi" class="form-control" ${isReadOnly ? 'disabled' : ''}>
+                        <option value="" ${!yuklemeTipiSelectValue ? 'selected' : ''}>Seçiniz...</option>
+                        <option value="TIR" ${yuklemeTipiSelectValue === 'TIR' ? 'selected' : ''}>TIR</option>
+                        <option value="KONTEYNER" ${yuklemeTipiSelectValue === 'KONTEYNER' ? 'selected' : ''}>KONTEYNER</option>
+                        <option value="RO-RO" ${yuklemeTipiSelectValue === 'RO-RO' ? 'selected' : ''}>RO-RO</option>
+                        <option value="FLATRACK" ${yuklemeTipiSelectValue === 'FLATRACK' ? 'selected' : ''}>FLATRACK</option>
+                        <option value="LOWBED" ${yuklemeTipiSelectValue === 'LOWBED' ? 'selected' : ''}>LOWBED</option>
+                        <option value="SKD" ${yuklemeTipiSelectValue === 'SKD' ? 'selected' : ''}>SKD</option>
+                        <option value="Elle girin" ${yuklemeTipiSelectValue === 'Elle girin' ? 'selected' : ''}>Elle girin</option>
+                    </select>
+                    <input type="text" id="yukleme_tipi_custom_detail" class="form-control" placeholder="Yükleme tipini yazın..." 
+                           value="${escapeHtml(customYuklemeTipiValue)}" style="display: ${customInputDisplay}; margin-top: 10px;" 
+                           ${isReadOnly ? 'disabled' : ''}>
+                </div>
+                <div class="form-group">
+                    <label for="kepce_sokme_detail"><strong>Kepçe Sökme:</strong></label>
+                    <input type="text" id="kepce_sokme_detail" name="kepce_sokme" class="form-control" value="${escapeHtml(machine.kepce_sokme || '')}" ${isReadOnly ? 'disabled' : ''}>
+                </div>
+            </div>
+
             <br>
             <h2>Son Durum Notu</h2>
             ${finalStatusHtml}
@@ -977,6 +1008,42 @@ const addDetailViewEventListeners = (machineId) => {
             const { error } = await _supabase.from('machines').update({ customer_name: newName }).eq('id', machineId);
             if (error) {
                 alert('Müşteri ismi güncellenirken hata oluştu: ' + error.message);
+            }
+        });
+    }
+
+    const yuklemeTipiSelect = document.getElementById('yukleme_tipi_detail');
+    if (yuklemeTipiSelect) {
+        const customInput = document.getElementById('yukleme_tipi_custom_detail');
+
+        yuklemeTipiSelect.addEventListener('change', async (event) => {
+            const selectedValue = event.target.value;
+            if (selectedValue === 'Elle girin') {
+                customInput.style.display = 'block';
+                customInput.focus();
+            } else {
+                customInput.style.display = 'none';
+                const { error } = await _supabase.from('machines').update({ yukleme_tipi: selectedValue }).eq('id', machineId);
+                if (error) {
+                    alert('Yükleme tipi güncellenirken hata oluştu: ' + error.message);
+                }
+            }
+        });
+
+        customInput.addEventListener('blur', async (event) => {
+            const newValue = event.target.value;
+            const { error } = await _supabase.from('machines').update({ yukleme_tipi: newValue }).eq('id', machineId);
+            if (error) alert('Özel yükleme tipi güncellenirken hata oluştu: ' + error.message);
+        });
+    }
+
+    const kepceSokmeInput = document.getElementById('kepce_sokme_detail');
+    if (kepceSokmeInput) {
+        kepceSokmeInput.addEventListener('blur', async (event) => {
+            const newValue = event.target.value;
+            const { error } = await _supabase.from('machines').update({ kepce_sokme: newValue }).eq('id', machineId);
+            if (error) {
+                alert('Kepçe sökme bilgisi güncellenirken hata oluştu: ' + error.message);
             }
         });
     }

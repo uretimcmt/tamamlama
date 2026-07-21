@@ -136,6 +136,8 @@ const renderMachineTable = (machines, from) => {
         { title: "Şase No", sortable: true, field: 'chassis_number' },
         { title: "Bant Çıkış", sortable: true, field: 'production_date' },
         { title: "Sevk Tarihi", sortable: true, field: 'shipment_date' },
+        { title: "YUKLEME TIPI", sortable: true, field: 'yukleme_tipi' },
+        { title: "KEPCE SOKME", sortable: true, field: 'kepce_sokme' },
         { title: "Son Durum", sortable: false },
     ];
 
@@ -196,6 +198,8 @@ const renderMachineTable = (machines, from) => {
                 <td>${machine.chassis_number || '-'}</td>
                 <td>${productionDate}</td>
                 <td>${shipmentDate}</td>
+                <td>${machine.yukleme_tipi || '-'}</td>
+                <td>${machine.kepce_sokme || '-'}</td>
                 <td><textarea class="final-status-textarea" data-machine-id="${machine.id}" rows="2" ${canEditFinalStatus ? '' : 'disabled'}>${machine.final_status || ''}</textarea></td>
                 ${statusCells}
                 ${actionsCell}
@@ -993,6 +997,8 @@ const exportProductionToExcel = async () => {
                     'Seri No': m.serial_number, 'Şase No': m.chassis_number,
                     'Bant Çıkış': new Date(m.production_date).toLocaleDateString('tr-TR'),
                     'Sevk Tarihi': m.shipment_date ? new Date(m.shipment_date).toLocaleDateString('tr-TR') : '-',
+                    'Yükleme Tipi': m.yukleme_tipi || '-',
+                    'Kepçe Sökme': m.kepce_sokme || '-',
                     'Son Durum': m.final_status || ''
                 };
                 PROCESS_STEPS.filter(s => s !== "Durum").forEach(step => {
@@ -1000,7 +1006,7 @@ const exportProductionToExcel = async () => {
                 });
                 return row;
             });
-            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            const ws = XLSX.utils.json_to_sheet(dataToExport, { cellStyles: true });
             ws['!cols'] = Object.keys(dataToExport[0] || {}).map(k => ({wch: k === 'Son Durum' ? 40 : 15}));
             XLSX.utils.book_append_sheet(wb, ws, sheetName);
         };
@@ -1061,6 +1067,13 @@ const handleAddMachineFormSubmit = async (event) => {
     addMachineButton.textContent = 'Ekleniyor...';
 
     const formData = new FormData(addMachineForm);
+    
+    // YENİ: Yükleme tipi mantığı
+    let yuklemeTipiValue = formData.get('yukleme_tipi');
+    if (yuklemeTipiValue === 'custom') {
+        yuklemeTipiValue = formData.get('yukleme_tipi_custom');
+    }
+
     const machineData = {
         machine_type: formData.get('machine_type'),
         model: formData.get('model'),
@@ -1068,6 +1081,8 @@ const handleAddMachineFormSubmit = async (event) => {
         serial_number: formData.get('serial_number'),
         chassis_number: formData.get('chassis_number'),
         production_date: formData.get('production_date'),
+        yukleme_tipi: yuklemeTipiValue,
+        kepce_sokme: formData.get('kepce_sokme'),
         status: {}, // Başlangıçta boş bir JSON objesi
         is_shipped: false,
     };
@@ -1291,6 +1306,19 @@ const setupEventListeners = () => {
             }
         }
     });
+
+    // YENİ: Yeni makina ekleme modalındaki yükleme tipi için olay dinleyici
+    const yuklemeTipiSelectModal = document.getElementById('yukleme_tipi');
+    if (yuklemeTipiSelectModal) {
+        yuklemeTipiSelectModal.addEventListener('change', () => {
+            const customInput = document.getElementById('yukleme_tipi_custom');
+            if (yuklemeTipiSelectModal.value === 'custom') {
+                customInput.style.display = 'block';
+            } else {
+                customInput.style.display = 'none';
+            }
+        });
+    }
 
     // YENİ: Arama ve Filtreleme olay dinleyicileri
     const searchInput = document.getElementById('search-input');
